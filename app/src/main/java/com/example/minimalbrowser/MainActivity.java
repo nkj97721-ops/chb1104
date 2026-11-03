@@ -112,7 +112,6 @@ public class MainActivity extends Activity {
                 progress.setProgress(value);
                 if(value>=100) progress.setVisibility(ProgressBar.GONE);
             }
-            @Override public void onReceivedTitle(WebView v,String t){ if(t!=null) title=t==null?null:title; }
         });
         web.setDownloadListener((url,ua,disposition,mime,size)->{
             android.content.Intent i=new android.content.Intent(android.content.Intent.ACTION_VIEW,android.net.Uri.parse(url));
@@ -132,7 +131,7 @@ public class MainActivity extends Activity {
     }
     private TextView action(String text){
         TextView v=new TextView(this); v.setText(text); v.setTextColor(TEXT);
-        v.setTextSize(15); v.setGravity(Gravity.CENTER); v.setTypeface(Typeface.DEFAULT,Typeface.MEDIUM);
+        v.setTextSize(15); v.setGravity(Gravity.CENTER); v.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
         return v;
     }
     private GradientDrawable round(int color,int radius){
