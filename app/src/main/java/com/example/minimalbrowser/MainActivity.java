@@ -3,144 +3,93 @@ package com.example.minimalbrowser;
 import android.app.Activity;
 import android.os.Bundle;
 import android.graphics.Color;
-import android.graphics.drawable.GradientDrawable;
 import android.view.Gravity;
 import android.view.KeyEvent;
-import android.view.View;
 import android.view.Window;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
-import android.webkit.*;
-import android.widget.*;
-import android.text.InputType;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+import android.widget.EditText;
+import android.widget.LinearLayout;
 
 public class MainActivity extends Activity {
-    private static final int BLACK = Color.BLACK;
-    private static final int WHITE = Color.WHITE;
     private static final String HOME = "https://www.google.com";
-    private WebView web;
-    private EditText address;
-    private ProgressBar progress;
+    private WebView webView;
+    private EditText addressBar;
 
-    @Override public void onCreate(Bundle state) {
-        super.onCreate(state);
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
         Window window = getWindow();
-        window.setStatusBarColor(BLACK);
-        window.setNavigationBarColor(BLACK);
+        window.setStatusBarColor(Color.BLACK);
+        window.setNavigationBarColor(Color.BLACK);
         window.getDecorView().setSystemUiVisibility(0);
         if (android.os.Build.VERSION.SDK_INT >= 29) {
             window.setStatusBarContrastEnforced(false);
             window.setNavigationBarContrastEnforced(false);
         }
-        buildUi();
-        configureWebView();
-        if (state == null) web.loadUrl(HOME);
-        else if (web.restoreState(state) == null) web.loadUrl(HOME);
-    }
 
-    private void buildUi() {
-        // Android system status bar is row 1. This address toolbar is row 2.
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(BLACK);
+        root.setBackgroundColor(Color.BLACK);
 
-        LinearLayout toolbar = new LinearLayout(this);
-        toolbar.setOrientation(LinearLayout.HORIZONTAL);
-        toolbar.setGravity(Gravity.CENTER_VERTICAL);
-        toolbar.setPadding(dp(4), dp(4), dp(6), dp(4));
-        toolbar.setBackgroundColor(BLACK);
+        // Row 1 is the Android system status bar.
+        // Row 2 is the only browser toolbar: a full-width address bar.
+        addressBar = new EditText(this);
+        addressBar.setSingleLine(true);
+        addressBar.setTextSize(15);
+        addressBar.setTextColor(Color.WHITE);
+        addressBar.setHintTextColor(0xFF888888);
+        addressBar.setHint("搜索 Google 或输入网址");
+        addressBar.setPadding(dp(14), 0, dp(14), 0);
+        addressBar.setGravity(Gravity.CENTER_VERTICAL);
+        addressBar.setImeOptions(EditorInfo.IME_ACTION_GO);
+        addressBar.setBackgroundColor(Color.BLACK);
+        root.addView(addressBar, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(48)));
 
-        TextView back = control("‹");
-        toolbar.addView(back, new LinearLayout.LayoutParams(dp(42), dp(44)));
-        back.setOnClickListener(v -> {
-            if (web != null && web.canGoBack()) web.goBack();
+        webView = new WebView(this);
+        webView.setBackgroundColor(Color.BLACK);
+        WebSettings settings = webView.getSettings();
+        settings.setJavaScriptEnabled(true);
+        settings.setDomStorageEnabled(true);
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageStarted(WebView view, String url,
+                                      android.graphics.Bitmap favicon) {
+                addressBar.setText(url);
+            }
+
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                addressBar.setText(url);
+            }
         });
+        root.addView(webView, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 0, 1));
 
-        address = new EditText(this);
-        address.setSingleLine(true);
-        address.setTextSize(15);
-        address.setTextColor(WHITE);
-        address.setHintTextColor(0xFF777777);
-        address.setHint("搜索 Google 或输入网址");
-        address.setPadding(dp(12), 0, dp(8), 0);
-        address.setImeOptions(EditorInfo.IME_ACTION_GO);
-        address.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
-        address.setBackground(round(BLACK, dp(3)));
-        address.setSelectAllOnFocus(false);
-        toolbar.addView(address, new LinearLayout.LayoutParams(0, dp(44), 1));
-
-        TextView reload = control("↻");
-        toolbar.addView(reload, new LinearLayout.LayoutParams(dp(42), dp(44)));
-        reload.setOnClickListener(v -> {
-            if (web != null) web.reload();
-        });
-
-        address.setOnEditorActionListener((v, action, event) -> {
-            if (action == EditorInfo.IME_ACTION_GO ||
-                (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER)) {
-                navigate();
+        addressBar.setOnEditorActionListener((view, actionId, event) -> {
+            boolean enterPressed = event != null
+                    && event.getKeyCode() == KeyEvent.KEYCODE_ENTER
+                    && event.getAction() == KeyEvent.ACTION_UP;
+            if (actionId == EditorInfo.IME_ACTION_GO || enterPressed) {
+                openAddress(addressBar.getText().toString());
                 return true;
             }
             return false;
         });
-        root.addView(toolbar, new LinearLayout.LayoutParams(-1, dp(52)));
 
-        progress = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
-        progress.setMax(100);
-        progress.setProgressTintList(android.content.res.ColorStateList.valueOf(WHITE));
-        progress.setProgressBackgroundTintList(android.content.res.ColorStateList.valueOf(BLACK));
-        progress.setVisibility(View.GONE);
-        root.addView(progress, new LinearLayout.LayoutParams(-1, dp(2)));
-
-        web = new WebView(this);
-        web.setBackgroundColor(BLACK);
-        root.addView(web, new LinearLayout.LayoutParams(-1, 0, 1));
         setContentView(root);
-    }
-
-    private TextView control(String label) {
-        TextView view = new TextView(this);
-        view.setText(label);
-        view.setTextSize(27);
-        view.setTextColor(WHITE);
-        view.setGravity(Gravity.CENTER);
-        view.setBackgroundColor(BLACK);
-        return view;
-    }
-
-    private void configureWebView() {
-        WebSettings settings = web.getSettings();
-        settings.setJavaScriptEnabled(true);
-        settings.setDomStorageEnabled(true);
-        settings.setSupportZoom(true);
-        settings.setBuiltInZoomControls(true);
-        settings.setDisplayZoomControls(false);
-        if (android.os.Build.VERSION.SDK_INT >= 29) {
-            settings.setAlgorithmicDarkeningAllowed(true);
-        } else if (android.os.Build.VERSION.SDK_INT >= 21) {
-            web.setForceDark(WebSettings.FORCE_DARK_ON);
+        if (savedInstanceState == null || webView.restoreState(savedInstanceState) == null) {
+            webView.loadUrl(HOME);
         }
-
-        web.setWebViewClient(new WebViewClient() {
-            @Override public void onPageStarted(WebView view, String url, android.graphics.Bitmap icon) {
-                address.setText(url);
-                progress.setVisibility(View.VISIBLE);
-            }
-            @Override public void onPageFinished(WebView view, String url) {
-                address.setText(url);
-                progress.setVisibility(View.GONE);
-            }
-        });
-        web.setWebChromeClient(new WebChromeClient() {
-            @Override public void onProgressChanged(WebView view, int value) {
-                progress.setProgress(value);
-                progress.setVisibility(value >= 100 ? View.GONE : View.VISIBLE);
-            }
-        });
     }
 
-    private void navigate() {
-        String value = address.getText().toString().trim();
+    private void openAddress(String input) {
+        String value = input == null ? "" : input.trim();
         if (value.isEmpty()) return;
 
         String url;
@@ -149,34 +98,35 @@ public class MainActivity extends Activity {
         } else if (value.matches("(?i)^[a-z0-9.-]+\\.[a-z]{2,}(:[0-9]+)?(/.*)?$")) {
             url = "https://" + value;
         } else {
-            url = "https://www.google.com/search?q=" + android.net.Uri.encode(value);
+            url = "https://www.google.com/search?q="
+                    + android.net.Uri.encode(value);
         }
-        web.loadUrl(url);
 
-        InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
-        if (imm != null) imm.hideSoftInputFromWindow(address.getWindowToken(), 0);
-        address.clearFocus();
-    }
-
-    private GradientDrawable round(int color, int radius) {
-        GradientDrawable drawable = new GradientDrawable();
-        drawable.setColor(color);
-        drawable.setCornerRadius(radius);
-        drawable.setStroke(dp(1), 0xFF252525);
-        return drawable;
+        webView.loadUrl(url);
+        InputMethodManager keyboard = (InputMethodManager)
+                getSystemService(INPUT_METHOD_SERVICE);
+        if (keyboard != null) {
+            keyboard.hideSoftInputFromWindow(addressBar.getWindowToken(), 0);
+        }
+        addressBar.clearFocus();
     }
 
     private int dp(int value) {
         return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
     }
 
-    @Override protected void onSaveInstanceState(Bundle out) {
-        super.onSaveInstanceState(out);
-        if (web != null) web.saveState(out);
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        if (webView != null) webView.saveState(outState);
     }
 
-    @Override public void onBackPressed() {
-        if (web != null && web.canGoBack()) web.goBack();
-        else super.onBackPressed();
+    @Override
+    public void onBackPressed() {
+        if (webView != null && webView.canGoBack()) {
+            webView.goBack();
+        } else {
+            super.onBackPressed();
+        }
     }
 }
