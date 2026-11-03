@@ -18,6 +18,7 @@ public class MainActivity extends Activity {
     private static final String HOME = "https://www.google.com";
     private WebView webView;
     private EditText addressBar;
+    private LinearLayout root;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -32,12 +33,12 @@ public class MainActivity extends Activity {
             window.setNavigationBarContrastEnforced(false);
         }
 
-        LinearLayout root = new LinearLayout(this);
+        root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(Color.BLACK);
 
-        // Row 1 is the Android system status bar.
-        // Row 2 is the only browser toolbar: a full-width address bar.
+        // The Android status bar is row one.
+        // The address row expands so both top rows occupy about half the screen.
         addressBar = new EditText(this);
         addressBar.setSingleLine(true);
         addressBar.setTextSize(15);
@@ -49,7 +50,7 @@ public class MainActivity extends Activity {
         addressBar.setImeOptions(EditorInfo.IME_ACTION_GO);
         addressBar.setBackgroundColor(Color.BLACK);
         root.addView(addressBar, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(48)));
+                LinearLayout.LayoutParams.MATCH_PARENT, 0));
 
         webView = new WebView(this);
         webView.setBackgroundColor(Color.BLACK);
@@ -83,6 +84,15 @@ public class MainActivity extends Activity {
         });
 
         setContentView(root);
+        // Measure after Android applies system status/navigation bar insets.
+        root.post(() -> {
+            int halfHeight = root.getHeight() / 2;
+            LinearLayout.LayoutParams params =
+                    (LinearLayout.LayoutParams) addressBar.getLayoutParams();
+            params.height = halfHeight;
+            addressBar.setLayoutParams(params);
+        });
+
         if (savedInstanceState == null || webView.restoreState(savedInstanceState) == null) {
             webView.loadUrl(HOME);
         }
