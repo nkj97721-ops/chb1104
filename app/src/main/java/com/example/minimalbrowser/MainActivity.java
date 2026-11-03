@@ -2,6 +2,7 @@ package com.example.minimalbrowser;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.os.Build;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.view.Gravity;
@@ -25,6 +26,8 @@ public class MainActivity extends Activity {
     private WebView web;
     private EditText address;
     private ProgressBar progress;
+    private Button modeButton;
+    private boolean darkPages = true;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -39,13 +42,15 @@ public class MainActivity extends Activity {
         LinearLayout top = new LinearLayout(this);
         top.setOrientation(LinearLayout.HORIZONTAL);
         top.setGravity(Gravity.CENTER_VERTICAL);
-        top.setPadding(dp(10), dp(10), dp(10), dp(8));
+        top.setPadding(dp(8), dp(9), dp(8), dp(8));
         top.setBackgroundColor(BG);
 
         Button back = navButton("‹");
         Button forward = navButton("›");
         Button refresh = navButton("↻");
         Button home = navButton("⌂");
+        modeButton = navButton("☀");
+        modeButton.setTextSize(18);
 
         address = new EditText(this);
         address.setSingleLine(true);
@@ -59,12 +64,13 @@ public class MainActivity extends Activity {
         address.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_URI);
 
         LinearLayout.LayoutParams addressParams = new LinearLayout.LayoutParams(0, dp(46), 1);
-        addressParams.setMargins(dp(5), 0, dp(5), 0);
+        addressParams.setMargins(dp(4), 0, dp(4), 0);
         top.addView(back);
         top.addView(forward);
         top.addView(address, addressParams);
         top.addView(refresh);
         top.addView(home);
+        top.addView(modeButton);
         root.addView(top);
 
         progress = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
@@ -80,7 +86,7 @@ public class MainActivity extends Activity {
         settings.setSupportZoom(true);
         settings.setBuiltInZoomControls(true);
         settings.setDisplayZoomControls(false);
-        web.setBackgroundColor(Color.WHITE);
+        applyPageTheme();
         web.setWebViewClient(new WebViewClient() {
             @Override public void onPageStarted(WebView view, String url, android.graphics.Bitmap icon) {
                 address.setText(url);
@@ -110,7 +116,25 @@ public class MainActivity extends Activity {
         forward.setOnClickListener(v -> { if (web.canGoForward()) web.goForward(); });
         refresh.setOnClickListener(v -> web.reload());
         home.setOnClickListener(v -> web.loadUrl("https://www.google.com"));
+        modeButton.setOnClickListener(v -> {
+            darkPages = !darkPages;
+            applyPageTheme();
+            modeButton.setText(darkPages ? "☀" : "☾");
+            web.reload();
+        });
+        modeButton.setText("☀");
         web.loadUrl("https://www.google.com");
+    }
+
+    private void applyPageTheme() {
+        if (web == null) return;
+        WebSettings settings = web.getSettings();
+        if (Build.VERSION.SDK_INT >= 33) {
+            settings.setAlgorithmicDarkeningAllowed(darkPages);
+        } else if (Build.VERSION.SDK_INT >= 29) {
+            settings.setForceDark(darkPages ? WebSettings.FORCE_DARK_ON : WebSettings.FORCE_DARK_OFF);
+        }
+        web.setBackgroundColor(darkPages ? BG : Color.WHITE);
     }
 
     private void openInput() {
@@ -137,8 +161,8 @@ public class MainActivity extends Activity {
         button.setTypeface(Typeface.DEFAULT, Typeface.NORMAL);
         button.setTextColor(TEXT);
         button.setAllCaps(false);
-        button.setMinWidth(dp(38));
-        button.setMinimumWidth(dp(38));
+        button.setMinWidth(dp(36));
+        button.setMinimumWidth(dp(36));
         button.setMinHeight(dp(44));
         button.setPadding(0, 0, 0, 0);
         button.setBackgroundTintList(android.content.res.ColorStateList.valueOf(BG));
