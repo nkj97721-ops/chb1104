@@ -2,67 +2,106 @@ package com.example.minimalbrowser;
 
 import android.app.Activity;
 import android.os.Bundle;
-import android.view.View;
+import android.graphics.Color;
+import android.graphics.Typeface;
+import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.inputmethod.EditorInfo;
-import android.graphics.Color;
+import android.view.inputmethod.InputMethodManager;
+import android.content.Context;
 import android.webkit.WebChromeClient;
+import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.*;
 
 public class MainActivity extends Activity {
+    private static final int BG = Color.rgb(15, 17, 21);
+    private static final int PANEL = Color.rgb(27, 30, 37);
+    private static final int TEXT = Color.rgb(238, 240, 245);
+    private static final int MUTED = Color.rgb(155, 163, 178);
+    private static final int ACCENT = Color.rgb(130, 170, 255);
+
     private WebView web;
     private EditText address;
-    private final String HOME = "https://www.google.com";
+    private ProgressBar progress;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
-        LinearLayout page = new LinearLayout(this);
-        page.setOrientation(LinearLayout.VERTICAL);
-        page.setBackgroundColor(Color.WHITE);
+        getWindow().setStatusBarColor(BG);
+        getWindow().setNavigationBarColor(BG);
+        getWindow().getDecorView().setSystemUiVisibility(0);
 
-        LinearLayout bar = new LinearLayout(this);
-        bar.setPadding(8, 8, 8, 8);
-        bar.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackgroundColor(BG);
 
-        Button back = button("‹"), forward = button("›"), refresh = button("↻"), home = button("⌂");
+        LinearLayout top = new LinearLayout(this);
+        top.setOrientation(LinearLayout.HORIZONTAL);
+        top.setGravity(Gravity.CENTER_VERTICAL);
+        top.setPadding(dp(10), dp(10), dp(10), dp(8));
+        top.setBackgroundColor(BG);
+
+        Button back = navButton("‹");
+        Button forward = navButton("›");
+        Button refresh = navButton("↻");
+        Button home = navButton("⌂");
+
         address = new EditText(this);
         address.setSingleLine(true);
         address.setTextSize(14);
-        address.setHint("输入网址或搜索内容");
+        address.setTextColor(TEXT);
+        address.setHintTextColor(MUTED);
+        address.setHint("搜索或输入网址");
+        address.setPadding(dp(14), 0, dp(10), 0);
+        address.setBackground(roundBackground(PANEL, dp(18)));
         address.setImeOptions(EditorInfo.IME_ACTION_GO);
         address.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_URI);
-        LinearLayout.LayoutParams editParams = new LinearLayout.LayoutParams(0, 44, 1);
-        bar.addView(back); bar.addView(forward); bar.addView(address, editParams);
-        bar.addView(refresh); bar.addView(home);
-        page.addView(bar);
+
+        LinearLayout.LayoutParams addressParams = new LinearLayout.LayoutParams(0, dp(46), 1);
+        addressParams.setMargins(dp(5), 0, dp(5), 0);
+        top.addView(back);
+        top.addView(forward);
+        top.addView(address, addressParams);
+        top.addView(refresh);
+        top.addView(home);
+        root.addView(top);
+
+        progress = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+        progress.setMax(100);
+        progress.setProgressTintList(android.content.res.ColorStateList.valueOf(ACCENT));
+        progress.setProgressBackgroundTintList(android.content.res.ColorStateList.valueOf(PANEL));
+        root.addView(progress, new LinearLayout.LayoutParams(-1, dp(2)));
 
         web = new WebView(this);
-        web.getSettings().setJavaScriptEnabled(true);
-        web.getSettings().setDomStorageEnabled(true);
-        web.getSettings().setSupportZoom(true);
-        web.getSettings().setBuiltInZoomControls(true);
-        web.getSettings().setDisplayZoomControls(false);
+        WebSettings settings = web.getSettings();
+        settings.setJavaScriptEnabled(true);
+        settings.setDomStorageEnabled(true);
+        settings.setSupportZoom(true);
+        settings.setBuiltInZoomControls(true);
+        settings.setDisplayZoomControls(false);
+        web.setBackgroundColor(Color.WHITE);
         web.setWebViewClient(new WebViewClient() {
-            @Override public void onPageStarted(WebView v, String url, android.graphics.Bitmap icon) { address.setText(url); }
-            @Override public void onPageFinished(WebView v, String url) { address.setText(url); }
+            @Override public void onPageStarted(WebView view, String url, android.graphics.Bitmap icon) {
+                address.setText(url);
+            }
+            @Override public void onPageFinished(WebView view, String url) {
+                address.setText(url);
+            }
         });
-        web.setWebChromeClient(new WebChromeClient());
-        page.addView(web, new LinearLayout.LayoutParams(-1, 0, 1));
-        setContentView(page);
+        web.setWebChromeClient(new WebChromeClient() {
+            @Override public void onProgressChanged(WebView view, int value) {
+                progress.setProgress(value);
+                progress.setVisibility(value >= 100 ? android.view.View.GONE : android.view.View.VISIBLE);
+            }
+        });
+        root.addView(web, new LinearLayout.LayoutParams(-1, 0, 1));
+        setContentView(root);
 
-        address.setOnEditorActionListener((v, action, event) -> {
-            if (action == EditorInfo.IME_ACTION_GO || (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER)) {
-                String s = address.getText().toString().trim();
-                if (!s.isEmpty()) {
-                    String url = s.matches("(?i)^https?://.*") ? s :
-                        (s.matches("(?i)^[a-z0-9.-]+\\.[a-z]{2,}(:[0-9]+)?(/.*)?$") ? "https://" + s :
-                        "https://www.google.com/search?q=" + android.net.Uri.encode(s));
-                    web.loadUrl(url);
-                    ((android.view.inputmethod.InputMethodManager)getSystemService(INPUT_METHOD_SERVICE))
-                        .hideSoftInputFromWindow(address.getWindowToken(), 0);
-                }
+        address.setOnEditorActionListener((view, action, event) -> {
+            boolean enter = event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER;
+            if (action == EditorInfo.IME_ACTION_GO || enter) {
+                openInput();
                 return true;
             }
             return false;
@@ -70,14 +109,55 @@ public class MainActivity extends Activity {
         back.setOnClickListener(v -> { if (web.canGoBack()) web.goBack(); });
         forward.setOnClickListener(v -> { if (web.canGoForward()) web.goForward(); });
         refresh.setOnClickListener(v -> web.reload());
-        home.setOnClickListener(v -> web.loadUrl(HOME));
-        web.loadUrl(HOME);
+        home.setOnClickListener(v -> web.loadUrl("https://www.google.com"));
+        web.loadUrl("https://www.google.com");
     }
-    private Button button(String text) {
-        Button b = new Button(this); b.setText(text); b.setTextSize(18);
-        b.setMinWidth(40); b.setPadding(4, 0, 4, 0); return b;
+
+    private void openInput() {
+        String value = address.getText().toString().trim();
+        if (value.isEmpty()) return;
+        String url;
+        if (value.matches("(?i)^https?://.*")) {
+            url = value;
+        } else if (value.matches("(?i)^[a-z0-9.-]+\\.[a-z]{2,}(:[0-9]+)?(/.*)?$")) {
+            url = "https://" + value;
+        } else {
+            url = "https://www.google.com/search?q=" + android.net.Uri.encode(value);
+        }
+        web.loadUrl(url);
+        ((InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE))
+            .hideSoftInputFromWindow(address.getWindowToken(), 0);
+        address.clearFocus();
     }
+
+    private Button navButton(String label) {
+        Button button = new Button(this);
+        button.setText(label);
+        button.setTextSize(23);
+        button.setTypeface(Typeface.DEFAULT, Typeface.NORMAL);
+        button.setTextColor(TEXT);
+        button.setAllCaps(false);
+        button.setMinWidth(dp(38));
+        button.setMinimumWidth(dp(38));
+        button.setMinHeight(dp(44));
+        button.setPadding(0, 0, 0, 0);
+        button.setBackgroundTintList(android.content.res.ColorStateList.valueOf(BG));
+        return button;
+    }
+
+    private android.graphics.drawable.GradientDrawable roundBackground(int color, int radius) {
+        android.graphics.drawable.GradientDrawable shape = new android.graphics.drawable.GradientDrawable();
+        shape.setColor(color);
+        shape.setCornerRadius(radius);
+        return shape;
+    }
+
+    private int dp(int value) {
+        return (int)(value * getResources().getDisplayMetrics().density + 0.5f);
+    }
+
     @Override public void onBackPressed() {
-        if (web != null && web.canGoBack()) web.goBack(); else super.onBackPressed();
+        if (web != null && web.canGoBack()) web.goBack();
+        else super.onBackPressed();
     }
 }
