@@ -1,13 +1,17 @@
-# Minimal Browser
+# 夜航浏览器
 
-最小 Android WebView 浏览器：地址栏、网页搜索、前进/后退、刷新、主页、缩放。
+简洁深色 Android 浏览器。
 
-## 自动构建 APK
-进入 GitHub 仓库的 Actions 页面，等待 Android APK Build 工作流完成，在运行记录底部下载 `MinimalBrowser-debug-apk`。
+- 深色地址栏与导航控件
+- 网址访问与 Google 搜索
+- 前进、后退、刷新、主页
+- 网页缩放
+- 页面加载进度条
 
-## 本地构建
-使用 Android Studio 打开项目，安装 Android SDK Platform 35，然后执行 `gradle assembleDebug`。
+## 下载 APK
+打开仓库的 Actions 页面，进入最新成功的 Android APK Build 运行记录，在 Artifacts 下载 `MinimalBrowser-debug-apk`。
 
-APK 输出位置：`app/build/outputs/apk/debug/app-debug.apk`。
+## 构建要求
+Android Studio / Gradle 8.9 / JDK 17 / Android SDK 35。
 
 最低 Android 版本：Android 6.0（API 23）。
